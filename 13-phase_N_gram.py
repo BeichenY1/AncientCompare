@@ -41,7 +41,7 @@ def filter_similar_segments(segments1, segments2, n, ngram_threshold):
 def calculate_similarity(str1, str2):
     return SequenceMatcher(None, str1, str2).ratio()
 
-# 计算最长公共子串
+# 计算最长公共子串(找到完全一样的字符串)
 def longest_common_substrings(str1, str2):
     m, n = len(str1), len(str2)
     lcs_matrix = [[0] * (n + 1) for _ in range(m + 1)]

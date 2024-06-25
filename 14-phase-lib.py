@@ -1,6 +1,6 @@
-import re
-from collections import defaultdict, Counter
+from collections import defaultdict
 from rapidfuzz import fuzz
+import Levenshtein
 
 # 读取文件内容
 def read_file(file_path):
@@ -15,38 +15,23 @@ def split_text_fixed_length(text, window_size, step, start_offset=0):
     return substrings
 
 # 使用RapidFuzz计算段落间的相似度
-def calculate_similarity(str1, str2):
+def calculate_fuzz_similarity(str1, str2):
     return fuzz.ratio(str1, str2) / 100.0
+
+# 计算字符串相似度（Levenshtein）
+def calculate_levenshtein_similarity(str1, str2):
+    return Levenshtein.ratio(str1, str2)
 
 # 计算段落相似度并筛选
 def filter_similar_segments(segments1, segments2, seg_threshold):
     similar_segments = defaultdict(list)
     for seg1, idx1_start, idx1_end in segments1:
         for seg2, idx2_start, idx2_end in segments2:
-            similarity = calculate_similarity(seg1, seg2)
+            similarity = calculate_fuzz_similarity(seg1, seg2)
             if similarity >= seg_threshold:
                 key = f"文章一-段落-{idx1_start}-{idx1_end}"
-                similar_segments[key].append(f"文章二-段落-{idx2_start}-{idx2_end}")
+                similar_segments[key].append((f"文章二-段落-{idx2_start}-{idx2_end}-{similarity * 100:.2f}%"))
     return similar_segments
-
-# 计算最长公共子串
-def longest_common_substrings(str1, str2):
-    m, n = len(str1), len(str2)
-    lcs_matrix = [[0] * (n + 1) for _ in range(m + 1)]
-    length = 0
-    substrings = set()
-
-    for i in range(1, m + 1):
-        for j in range(1, n + 1):
-            if str1[i - 1] == str2[j - 1]:
-                lcs_matrix[i][j] = lcs_matrix[i - 1][j - 1] + 1
-                if lcs_matrix[i][j] > length:
-                    length = lcs_matrix[i][j]
-                    substrings = {str1[i - length:i]}
-                elif lcs_matrix[i][j] == length:
-                    substrings.add(str1[i - length:i])
-
-    return list(substrings)
 
 # 使用最长公共子串筛选并输出最大相似子串
 def lcs_based_filtering(segments1, segments2, seg_threshold, lcs_threshold, window_size):
@@ -55,37 +40,30 @@ def lcs_based_filtering(segments1, segments2, seg_threshold, lcs_threshold, wind
 
     for seg1, idx1_start, idx1_end in segments1:
         for seg2, idx2_start, idx2_end in segments2:
-            lcs_list = longest_common_substrings(seg1, seg2)
-            for lcs in lcs_list:
-                lcs_similarity = len(lcs) / max(len(seg1), len(seg2))
-                if lcs_similarity >= lcs_threshold:
-                    lcs_results.append((lcs, idx1_start, idx1_end, idx2_start, idx2_end, lcs_similarity))
-                    segments1 = [seg for seg in segments1 if seg1 not in seg[0]]
-                    segments2 = [seg for seg in segments2 if seg2 not in seg[0]]
-                else:
-                    overall_similarity = calculate_similarity(seg1, seg2)
-                    if overall_similarity >= lcs_threshold:
-                        lcs_results.append((seg1, idx1_start, idx1_end, idx2_start, idx2_end, overall_similarity))
-                        segments1 = [seg for seg in segments1 if seg1 not in seg[0]]
-                        segments2 = [seg for seg in segments2 if seg2 not in seg[0]]
+            lcs_similarity = calculate_levenshtein_similarity(seg1, seg2)
+            if lcs_similarity >= lcs_threshold:
+                lcs_results.append((seg1, idx1_start, idx1_end, seg2, idx2_start, idx2_end, lcs_similarity))
+                segments1 = [seg for seg in segments1 if seg1 not in seg[0]]
+                segments2 = [seg for seg in segments2 if seg2 not in seg[0]]
 
     # 打印并保存LCS和相似度结果
     with open('./final_similar_segments.txt', 'a', encoding='utf-8') as file:
         file.write(f"\n窗口长度: {window_size}\n")
         file.write(f"{'文章一':<40} {'文章二':<40} {'相似度':<10}\n")
-        for lcs, start1, end1, start2, end2, similarity in lcs_results:
+        print(f"\n窗口长度: {window_size}\n")
+        for seg1, start1, end1, seg2, start2, end2, similarity in lcs_results:
             similarity_percentage = f"{similarity * 100:.2f}%"
-            article1 = f"{lcs}-{start1}-{end1}"
-            article2 = f"{lcs}-{start2}-{end2}"
+            article1 = f"{seg1}-{start1}-{end1}"
+            article2 = f"{seg2}-{start2}-{end2}"
             print(f"{article1:<40} {article2:<40} {similarity_percentage:<10}")
             file.write(f"{article1:<40} {article2:<40} {similarity_percentage:<10}\n")
     
     for seg1, idx1_start, idx1_end in segments1:
         for seg2, idx2_start, idx2_end in segments2:
-            similarity = calculate_similarity(seg1, seg2)
+            similarity = calculate_fuzz_similarity(seg1, seg2)
             if similarity >= seg_threshold:
                 key = f"文章一-段落-{idx1_start}-{idx1_end}"
-                similar_segments[key].append(f"文章二-段落-{idx2_start}-{idx2_end}")
+                similar_segments[key].append((f"文章二-段落-{idx2_start}-{idx2_end}-{similarity * 100:.2f}%"))
 
     return similar_segments
 
@@ -117,13 +95,21 @@ def progressive_filtering(text1, text2, initial_window_size, step, seg_threshold
         seen_segments2 = set()
 
         for key, value in similar_segments.items():
-            idx1_start, idx1_end = map(int, re.findall(r'\d+', key))
+            # 使用字符串分割来解析索引
+            parts = key.split('-')
+            idx1_start, idx1_end = int(parts[2]), int(parts[3])
             new_segments1.extend(split_text_fixed_length(text1[idx1_start:idx1_end+1], next_window_size, step, idx1_start))
+            
             for seg in value:
-                idx2_start, idx2_end = map(int, re.findall(r'\d+', seg))
-                if (idx2_start, idx2_end) not in seen_segments2:
-                    new_segments2.extend(split_text_fixed_length(text2[idx2_start:idx2_end+1], next_window_size, step, idx2_start))
-                    seen_segments2.add((idx2_start, idx2_end))
+                # 确保seg是字符串并使用字符串分割来解析索引
+                if isinstance(seg, str):
+                    seg_parts = seg.split('-')
+                    idx2_start, idx2_end = int(seg_parts[2]), int(seg_parts[3])
+                    if (idx2_start, idx2_end) not in seen_segments2:
+                        new_segments2.extend(split_text_fixed_length(text2[idx2_start:idx2_end+1], next_window_size, step, idx2_start))
+                        seen_segments2.add((idx2_start, idx2_end))
+                else:
+                    print(f"Unexpected format for seg: {seg}")
 
         if next_window_size > max_window_size:
             similar_segments = filter_similar_segments(new_segments1, new_segments2, seg_threshold)
@@ -144,12 +130,12 @@ def main():
     hanshu_text = read_file('./hanshu.txt')
     shiji_text = read_file('./shiji.txt')
     
-    initial_window_size = 100
-    step = 100
-    seg_threshold = 0.10  # 用于n-gram过滤的阈值
-    lcs_threshold = 0.80  # 用于LCS过滤的阈值
+    initial_window_size = 1000
+    step = 1000
+    seg_threshold = 0.01  # 用于Segment过滤的阈值
+    lcs_threshold = 0.8  # 用于LCS过滤的阈值
     min_window_size = 4
-    max_window_size = 15
+    max_window_size = 30
     progressive_filtering(shiji_text, hanshu_text, initial_window_size, step, seg_threshold, lcs_threshold, min_window_size, max_window_size)
 
     print("最终相似的段落对已输出到final_similar_segments.txt。")
