@@ -1,4 +1,3 @@
-import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from sklearn.metrics.pairwise import cosine_similarity
 import jieba

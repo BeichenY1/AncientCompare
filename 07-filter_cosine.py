@@ -16,7 +16,7 @@ def split_text_fixed_length(text, min_window_size=500, max_window_size=600, step
 
 # 计算段落的TF-IDF向量
 def compute_tfidf_vectorizer(segments1, segments2):
-    vectorizer = TfidfVectorizer(min_df=1, ngram_range=(1, 4))  # 使用unigram、bigram和trigram
+    vectorizer = TfidfVectorizer(min_df=1, ngram_range=(1, 2))  # 使用unigram、bigram和trigram
     # 合并两个文档集以创建统一的词汇表
     combined_segments = [segment[0] for segment in segments1] + [segment[0] for segment in segments2]
     vectorizer.fit(combined_segments)
@@ -52,9 +52,9 @@ shiji_text = read_file('./shiji.txt')
 hanshu_text = read_file('./hanshu.txt')
 
 # 将文章按子串分割
-min_window_size = 1000  # 可以根据需要调整最小窗口长度
-max_window_size = 1200  # 可以根据需要调整最大窗口长度
-step = 900  # 可以根据需要调整步长
+min_window_size = 200  # 可以根据需要调整最小窗口长度
+max_window_size = 250  # 可以根据需要调整最大窗口长度
+step = 180  # 可以根据需要调整步长
 shiji_segments = split_text_fixed_length(shiji_text, min_window_size, max_window_size, step)
 hanshu_segments = split_text_fixed_length(hanshu_text, min_window_size, max_window_size, step)
 

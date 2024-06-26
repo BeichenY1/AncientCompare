@@ -58,9 +58,9 @@ def main():
     #         print(i,substring_s1,substring_s2)
     #         matching_substrings.append((substring_s1, substring_s2, block.size))
 
-    # # 示例2
-    # similarity2 = calculate_similarity_rapidfuzz(hanshu_text, shiji_text)
-    # print(f"RapidFuzz-相似度: {similarity2 * 100:.2f}%")
+    # 示例2
+    similarity2 = calculate_similarity_rapidfuzz(hanshu_text, "我们")
+    print(f"RapidFuzz-相似度: {similarity2 * 100:.2f}%")
 
     # # 示例3
     # similarity3 = calculate_similarity_levenshtein(hanshu_text, shiji_text)
@@ -71,12 +71,12 @@ def main():
     # print(f"Jellyfish-相似度: {similarity4 * 100:.2f}%")
 
     # 示例5
-    min_length = 4
-    min_similarity = 50
+    # min_length = 4
+    # min_similarity = 50
 
-    max_similar_substrings = get_max_similar_substrings(hanshu_text, shiji_text, min_length, min_similarity)
-    for i, (s1_sub, s2_sub, similarity) in enumerate(max_similar_substrings):
-        print(f"Match found {i}: '{s1_sub}'-'{s2_sub}'- {similarity}%")
+    # max_similar_substrings = get_max_similar_substrings(hanshu_text, shiji_text, min_length, min_similarity)
+    # for i, (s1_sub, s2_sub, similarity) in enumerate(max_similar_substrings):
+    #     print(f"Match found {i}: '{s1_sub}'-'{s2_sub}'- {similarity}%")
 
 if __name__ == "__main__":
     main()
