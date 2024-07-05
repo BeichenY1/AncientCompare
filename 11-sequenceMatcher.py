@@ -1,7 +1,5 @@
 from difflib import SequenceMatcher
 from rapidfuzz import fuzz
-import Levenshtein
-import jellyfish
 
 # 读取文件内容
 def read_file(file_path):
@@ -38,11 +36,11 @@ def find_longest_substring(s1, s2):
 
 # 主函数
 def main():
-    hanshu_text = read_file('./hanshu.txt')
-    shiji_text = read_file('./shiji.txt')
+    hanshu_text = read_file('./zhuangzi.txt')
+    shiji_text = read_file('./lvshichunqiu.txt')
 
-    min_length = 4
-    min_similarity = 90
+    min_length = 2
+    min_similarity = 50
 
     max_similar_substrings = get_max_similar_substrings(hanshu_text, shiji_text, min_length, min_similarity)
     for i, (s1_sub, s1_start, s1_end, s2_sub, s2_start, s2_end, similarity) in enumerate(max_similar_substrings):
